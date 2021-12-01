@@ -8,6 +8,9 @@ import Loading from '../Loading'
 import Pagination from '../Pagination'
 import usePagination from '../../hooks/usePagination'
 import { roundToDecimal } from '../../utils'
+import { ExportToCsv } from 'export-to-csv'
+import Button from '../Button'
+import { SaveIcon } from '@heroicons/react/solid'
 
 const QUOTE_DECIMALS = 6
 
@@ -32,6 +35,40 @@ const AccountFunding = () => {
   const mangoAccountPk = useMemo(() => {
     return mangoAccount.publicKey.toString()
   }, [mangoAccount])
+
+  const exportFundingDataToCSV = () => {
+    const assets = Object.keys(hourlyFunding)
+    let dataToExport = []
+
+    for (const asset of assets) {
+      dataToExport = [
+        ...dataToExport,
+        ...hourlyFunding[asset].map((funding) => {
+          console.log(funding)
+          return {
+            timestamp: funding.time,
+            asset: asset,
+            amount: funding.total_funding,
+          }
+        }),
+      ]
+    }
+
+    const options = {
+      fieldSeparator: ',',
+      quoteStrings: '"',
+      decimalSeparator: '.',
+      showLabels: true,
+      showTitle: false,
+      filename: 'Mango Markets - Funding History - ' + new Date().toString(),
+      useTextFile: false,
+      useBom: true,
+      headers: ['Timestamp', 'Asset', 'Amount'],
+    }
+
+    const exporter = new ExportToCsv(options)
+    exporter.generateCsv(dataToExport)
+  }
 
   useEffect(() => {
     if (!isEmpty(hourlyFunding)) {
@@ -90,6 +127,15 @@ const AccountFunding = () => {
     <>
       <div className="pb-3.5 text-th-fgd-1 text-base">
         {t('total-funding-stats')}
+        <Button
+          className={`float-right text-sm`}
+          onClick={exportFundingDataToCSV}
+        >
+          <div className={`flex items-center`}>
+            {t('export-data')}
+            <SaveIcon className={`h-4 w-4 ml-1.5`} />
+          </div>
+        </Button>
       </div>
       {mangoAccount ? (
         <div>
