@@ -12,9 +12,9 @@ import { useViewport } from '../../hooks/useViewport'
 import { breakpoints } from '../TradePageGrid'
 import { ExpandableRow } from '../TableElements'
 import MobileTableHeader from '../mobile/MobileTableHeader'
-import { ExportToCsv } from 'export-to-csv'
 import { SaveIcon } from '@heroicons/react/solid'
 import Button from '../Button'
+import { exportDataToCSV } from '../../utils/export'
 
 interface InterestStats {
   [key: string]: {
@@ -72,20 +72,15 @@ const AccountInterest = () => {
       ]
     }
 
-    const options = {
-      fieldSeparator: ',',
-      quoteStrings: '"',
-      decimalSeparator: '.',
-      showLabels: true,
-      showTitle: false,
-      filename: 'Mango Markets - Interest History - ' + new Date().toString(),
-      useTextFile: false,
-      useBom: true,
-      headers: ['Timestamp', 'Asset', 'Deposit Interest', 'Borrow Interest'],
-    }
+    const title = 'Mango Markets - Interest History - ' + new Date().toString()
+    const headers = [
+      'Timestamp',
+      'Asset',
+      'Deposit Interest',
+      'Borrow Interest',
+    ]
 
-    const exporter = new ExportToCsv(options)
-    exporter.generateCsv(dataToExport)
+    exportDataToCSV(dataToExport, title, headers, t)
   }
 
   useEffect(() => {

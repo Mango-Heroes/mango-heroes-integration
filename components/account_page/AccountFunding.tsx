@@ -8,9 +8,9 @@ import Loading from '../Loading'
 import Pagination from '../Pagination'
 import usePagination from '../../hooks/usePagination'
 import { roundToDecimal } from '../../utils'
-import { ExportToCsv } from 'export-to-csv'
 import Button from '../Button'
 import { SaveIcon } from '@heroicons/react/solid'
+import { exportDataToCSV } from '../../utils/export'
 
 const QUOTE_DECIMALS = 6
 
@@ -54,20 +54,10 @@ const AccountFunding = () => {
       ]
     }
 
-    const options = {
-      fieldSeparator: ',',
-      quoteStrings: '"',
-      decimalSeparator: '.',
-      showLabels: true,
-      showTitle: false,
-      filename: 'Mango Markets - Funding History - ' + new Date().toString(),
-      useTextFile: false,
-      useBom: true,
-      headers: ['Timestamp', 'Asset', 'Amount'],
-    }
+    const title = 'Mango Markets - Funding History - ' + new Date().toString()
+    const columns = ['Timestamp', 'Asset', 'Amount']
 
-    const exporter = new ExportToCsv(options)
-    exporter.generateCsv(dataToExport)
+    exportDataToCSV(dataToExport, title, columns, t)
   }
 
   useEffect(() => {
@@ -124,7 +114,7 @@ const AccountFunding = () => {
 
   return (
     <>
-      <div className="pb-4 text-th-fgd-1 text-lg">
+      <div className="pb-4 a text-lg">
         {t('total-funding-stats')}
         <Button
           className={`float-right text-sm`}

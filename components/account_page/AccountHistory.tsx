@@ -1,10 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import TradeHistoryTable from '../TradeHistoryTable'
 import { useTranslation } from 'next-i18next'
-// import useTradeHistory from '../../hooks/useTradeHistory'
+import useTradeHistory from '../../hooks/useTradeHistory'
 import Button from '../Button'
 import { SaveIcon } from '@heroicons/react/solid'
-// import { ExportToCsv } from 'export-to-csv'
 import useMangoStore from '../../stores/useMangoStore'
 import { ArrowSmDownIcon, ExternalLinkIcon } from '@heroicons/react/solid'
 import { Table, TrHead, Th, TrBody, Td } from '../TableElements'
@@ -15,6 +14,8 @@ import {
   getMarketByBaseSymbolAndKind,
   PerpMarket,
 } from '@blockworks-foundation/mango-client'
+import { notify } from '../../utils/notifications'
+import { exportDataToCSV } from '../../utils/export'
 
 const historyViews = [
   { label: 'Trades', key: 'Trades' },
@@ -28,6 +29,7 @@ export default function AccountHistory() {
   const [view, setView] = useState('Trades')
   const [history, setHistory] = useState(null)
   const mangoAccount = useMangoStore((s) => s.selectedMangoAccount.current)
+  const tradeHistory = useTradeHistory({ excludePerpLiquidations: true })
 
   const mangoAccountPk = useMemo(() => {
     console.log('new mango account')
@@ -35,44 +37,63 @@ export default function AccountHistory() {
     return mangoAccount.publicKey.toString()
   }, [mangoAccount])
 
-  // const exportTradeHistoryAsCSV = () => {
-  //   const dataToExport = tradeHistory.map((trade) => {
-  //     return {
-  //       asset: trade.marketName,
-  //       orderType: trade.side.toUpperCase(),
-  //       quantity: trade.size,
-  //       price: trade.price,
-  //       value: trade.value,
-  //       liquidity: trade.liquidity,
-  //       fee: trade.fee,
-  //       date: trade.loadTimestamp,
-  //     }
-  //   })
+  const exportTradeHistoryAsCSV = () => {
+    let dataToExport
+    let headers
 
-  //   const options = {
-  //     fieldSeparator: ',',
-  //     quoteStrings: '"',
-  //     decimalSeparator: '.',
-  //     showLabels: true,
-  //     showTitle: false,
-  //     filename: 'Mango Markets - Trade History - ' + new Date().toString(),
-  //     useTextFile: false,
-  //     useBom: true,
-  //     headers: [
-  //       'Market',
-  //       'Side',
-  //       'Size',
-  //       'Price',
-  //       'Value',
-  //       'Liquidity',
-  //       'Fee',
-  //       'Approx. Time',
-  //     ],
-  //   }
+    if (view == 'Trades') {
+      dataToExport = tradeHistory.map((trade) => {
+        console.log(trade)
+        return {
+          asset: trade.marketName,
+          orderType: trade.side.toUpperCase(),
+          quantity: trade.size,
+          price: trade.price,
+          value: trade.value,
+          liquidity: trade.liquidity,
+          fee: trade.feeCost,
+          date: trade.loadTimestamp,
+        }
+      })
+      headers = [
+        'Market',
+        'Side',
+        'Size',
+        'Price',
+        'Value',
+        'Liquidity',
+        'Fee',
+        'Approx. Time',
+      ]
+    } else {
+      dataToExport = history
+        .filter((val) => val.activity_type == view)
+        .map((row) => {
+          row = row.activity_details
 
-  //   const exporter = new ExportToCsv(options)
-  //   exporter.generateCsv(dataToExport)
-  // }
+          return {
+            date: row.block_datetime,
+            asset: row.symbol,
+            quantity: row.quantity,
+            value: row.usd_equivalent,
+          }
+        })
+      headers = ['Timestamp', 'Asset', 'Quantity', 'Value']
+    }
+
+    if (dataToExport.length == 0) {
+      notify({
+        title: t('export-data-empty'),
+        description: '',
+        type: 'info',
+      })
+      return
+    }
+
+    const title = historyViews.filter((v) => v.key == view)[0].label
+
+    exportDataToCSV(dataToExport, title, headers, t)
+  }
 
   useEffect(() => {
     const fetchAccountActivity = async () => {
@@ -87,53 +108,62 @@ export default function AccountHistory() {
       fetchAccountActivity()
     }
   }, [mangoAccountPk])
-
-  console.log('history', history)
-
+  // flex flex-col md:flex-row md:items-end md:justify-between
   return (
     <>
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between pb-4">
+      <div className=" pb-4">
         <div>
-          <div className="mb-1 text-th-fgd-1 text-lg">{t('history')}</div>
-          <div className="mr-4 text-xs text-th-fgd-3">
-            {t('delay-displaying-recent')} {t('use-explorer-one')}
-            <a
-              href={`https://explorer.solana.com/address/${mangoAccountPk}`}
-              target="_blank"
-              rel="noopener noreferrer"
+          <div className="flex justify-between mb-4 text-th-fgd-1 text-lg">
+            <div className={`sm:w-3/4`}>
+              <span>{t('history')}</span>
+              <div className="mr-4 text-xs text-th-fgd-3">
+                <div>
+                  <span>
+                    {t('delay-displaying-recent')} {t('use-explorer-one')}
+                    <a
+                      href={`https://explorer.solana.com/address/${mangoAccountPk}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t('use-explorer-two')}
+                    </a>
+                    {t('use-explorer-three')}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              className={`flex-none float-right text-sm h-9`}
+              onClick={exportTradeHistoryAsCSV}
             >
-              {t('use-explorer-two')}
-            </a>
-            {t('use-explorer-three')}
+              <div className={`flex items-center`}>
+                {t('export-data')}
+                <SaveIcon className={`h-4 w-4 ml-1.5`} />
+              </div>
+            </Button>
           </div>
         </div>
-        <Button
-          className={`float-right text-sm`}
-          // onClick={exportFundingDataToCSV}
-        >
-          <div className={`flex items-center`}>
-            {t('export-data')}
-            <SaveIcon className={`h-4 w-4 ml-1.5`} />
+        <div className="mb-1 mt-4 md:mt-0">
+          <div className="flex justify-end">
+            {historyViews.map(({ label, key }, index) => (
+              <div
+                className={`px-2 py-1 ${
+                  index > 0 ? 'ml-2' : null
+                } rounded-md cursor-pointer default-transition bg-th-bkg-3
+                            ${
+                              view === key
+                                ? `ring-1 ring-inset ring-th-primary text-th-primary`
+                                : `text-th-fgd-1 opacity-50 hover:opacity-100`
+                            }
+                          `}
+                onClick={() => setView(key)}
+                key={key as string}
+              >
+                {t(label.toLowerCase())}
+              </div>
+            ))}
           </div>
-        </Button>
-        <div className="flex mb-1 mt-4 md:mt-0">
-          {historyViews.map(({ label, key }, index) => (
-            <div
-              className={`px-2 py-1 ${
-                index > 0 ? 'ml-2' : null
-              } rounded-md cursor-pointer default-transition bg-th-bkg-3
-                          ${
-                            view === key
-                              ? `ring-1 ring-inset ring-th-primary text-th-primary`
-                              : `text-th-fgd-1 opacity-50 hover:opacity-100`
-                          }
-                        `}
-              onClick={() => setView(key)}
-              key={key as string}
-            >
-              {t(label.toLowerCase())}
-            </div>
-          ))}
         </div>
       </div>
       <ViewContent view={view} history={history} />

@@ -113,6 +113,8 @@
   "estimated-liq-price": "Est. Liq. Price",
   "explorer": "Explorer",
   "export-data": "Export Data",
+  "export-data-success": "Data exported successfully!",
+  "export-data-empty": "No data to export!",
   "fee": "Fee",
   "fee-discount": "Fee Discount",
   "funding": "Funding",
