@@ -1,3 +1,11 @@
+# Mango Heroes Integration
+
+Unfortunately, the Mango Heroes integration was not merged with the production build of Mango Markets therefore this repo is being archived.
+
+
+
+
+
 # Mango UI V3
 
 Uses:
